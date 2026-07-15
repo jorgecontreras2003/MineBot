@@ -7,7 +7,7 @@ package com.minebot.fabricbridge.config;
 public class ModConfig {
 
     private static final String DEFAULT_TRIGGER = "@bot";
-    private static final String DEFAULT_AI_URL = "http://localhost:3000/chat";
+    private static final String DEFAULT_AI_URL = "https://minebot-kuws.onrender.com/chat";
     private static final String DEFAULT_TIMEOUT = "90000";
 
     public String getTrigger() {
