@@ -20,6 +20,7 @@ logs/
 # Java / Gradle
 .gradle/
 build/
+bin/
 *.class
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
