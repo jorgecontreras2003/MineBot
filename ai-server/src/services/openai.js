@@ -1,0 +1,102 @@
+import OpenAI from 'openai';
+import { config } from '../config.js';
+import { logger } from '../utils/logger.js';
+
+/**
+ * Cliente para comunicarse con la API de OpenAI.
+ * Utiliza la Responses API, necesaria para GPT-5.
+ */
+export class OpenAIClient {
+  constructor() {
+    this.client = new OpenAI({ apiKey: config.openai.apiKey });
+    this.model = config.openai.model;
+  }
+
+  /**
+   * Genera una respuesta con GPT usando el contexto del servidor.
+   *
+   * @param {object} params
+   * @param {string} params.player
+   * @param {string} params.message
+   * @param {Array<{role: 'user'|'assistant', content: string}>} params.history
+   * @param {object} params.context
+   * @returns {Promise<{content: string, tokens: number, durationMs: number}>}
+   */
+  async generateResponse({ player, message, history, context }) {
+    const startTime = Date.now();
+
+    const input = buildInput({ player, message, history, context });
+
+    const response = await this.client.responses.create({
+      model: this.model,
+      input,
+      instructions: buildSystemPrompt(),
+      max_output_tokens: 500,
+      reasoning: { effort: 'low' },
+    });
+
+    const content = response.output_text?.trim() || 'No sé qué decir...';
+    const tokens = response.usage?.total_tokens ?? 0;
+    const durationMs = Date.now() - startTime;
+
+    logger.info('Respuesta generada por OpenAI', { player, tokens, durationMs });
+
+    return { content, tokens, durationMs };
+  }
+}
+
+/**
+ * Construye el input combinando historial, contexto y pregunta actual.
+ * @param {object} params
+ * @returns {Array<object>}
+ */
+function buildInput({ player, message, history, context }) {
+  const messages = [
+    { role: 'system', content: buildContextPrompt(context) },
+    ...history.map((entry) => ({ role: entry.role, content: entry.content })),
+    { role: 'user', content: `${player} pregunta: "${message}"` },
+  ];
+
+  return messages;
+}
+
+/**
+ * Prompt de sistema con la personalidad del bot.
+ * @returns {string}
+ */
+function buildSystemPrompt() {
+  return `Eres un jugador veterano de Minecraft en un servidor Fabric.
+Hablas de forma amigable, natural y útil.
+Responde siempre en español salvo que te escriban en otro idioma.
+Sé breve: máximo 2 o 3 líneas cortas. No uses listas extensas ni explicaciones largas.
+Usa el contexto del servidor para responder con precisión.
+Si no sabes algo, admítelo con humor. No inventes datos.`;
+}
+
+/**
+ * Construye el contexto del servidor como texto plano.
+ * @param {object} context
+ * @returns {string}
+ */
+function buildContextPrompt(context) {
+  const players = context.players?.length
+    ? context.players
+        .map(
+          (p) =>
+            `- ${p.name}: ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}`
+        )
+        .join('\n')
+    : 'Sin jugadores';
+
+  const mods = context.mods?.length ? context.mods.join(', ') : 'No disponibles';
+
+  return `Contexto actual del servidor:
+- Jugador que pregunta: ${context.player}
+- Hora: ${context.server?.time ?? 'desconocida'}
+- Clima: ${context.server?.weather ?? 'desconocido'}
+- Dimensión: ${context.server?.dimension ?? 'desconocida'}
+- Bioma: ${context.server?.biome ?? 'desconocido'}
+- Jugadores conectados:\n${players}
+- Mods cargados: ${mods}
+- Estado del bot: vida ${context.bot?.health ?? '?'}, hambre ${context.bot?.food ?? '?'}`;
+}

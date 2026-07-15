@@ -1,0 +1,25 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno (credenciales y configuración local)
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# Datos locales
+/data
+*.db
+
+# IDE
+.vscode/
+.idea/
+
+# Java / Gradle
+.gradle/
+build/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
