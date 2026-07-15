@@ -46,7 +46,8 @@ export const config = {
   },
 
   server: {
-    port: parseNumber('HTTP_PORT', 3000),
+    // Render (y otros hosts) suelen exponer el puerto en PORT.
+    port: parseNumber('PORT', parseNumber('HTTP_PORT', 3000)),
   },
 
   apiKey: process.env.API_KEY || undefined,

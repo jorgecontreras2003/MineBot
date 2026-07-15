@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: minebot-ai-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HTTP_PORT
+        value: 3000
+      - key: OPENAI_MODEL
+        value: gpt-5-mini
+      - key: BOT_NAME
+        value: MineBot
+      - key: BOT_TRIGGER
+        value: '@bot'
+      - key: MEMORY_SIZE
+        value: '10'
+      - key: COOLDOWN_SECONDS
+        value: '5'
+      - key: LOG_LEVEL
+        value: info
+      # Configura las siguientes en el dashboard de Render:
+      # - OPENAI_API_KEY
+      # - API_KEY
