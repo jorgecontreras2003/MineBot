@@ -27,7 +27,9 @@ public class ModConfig {
     }
 
     public String getApiKey() {
-        return getEnv("API_KEY", "");
+        // Se permite sobrescribir mediante variable de entorno, pero por defecto
+        // se usa la clave compartida con el AI Server desplegado en Render.
+        return getEnv("API_KEY", "5d6a98d9f6d0c4d5d3d6b7d4c8a9e1f2b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0");
     }
 
     private String getEnv(String key, String defaultValue) {
