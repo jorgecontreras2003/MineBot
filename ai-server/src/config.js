@@ -43,6 +43,7 @@ export const config = {
   bot: {
     name: process.env.BOT_NAME || 'SteveAI',
     trigger: process.env.BOT_TRIGGER || '@bot',
+    personality: process.env.BOT_PERSONALITY || 'troll',
   },
 
   server: {

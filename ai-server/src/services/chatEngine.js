@@ -29,7 +29,7 @@ export class ChatEngine {
     const cooldown = this.cooldown.check(player);
     if (!cooldown.allowed) {
       return {
-        reply: `Espera ${cooldown.remainingSeconds}s antes de volver a preguntar.`,
+        reply: `Tranquilo, campeón. Espera ${cooldown.remainingSeconds}s antes de volver a hablarme.`,
         source: 'local',
       };
     }
@@ -91,12 +91,13 @@ export class ChatEngine {
     if (this._matches(lower, ['jugadores conectados', 'quién está conectado', 'quien esta conectado', 'lista de jugadores'])) {
       const names = context.players?.map((p) => p.name).join(', ') || 'nadie';
       const count = context.players?.length || 0;
-      return count === 0 ? 'No hay jugadores conectados.' : `Jugadores conectados (${count}): ${names}.`;
+      if (count === 0) return 'No hay nadie conectado, solo tú y tu soledad.';
+      return `Conectados (${count}): ${names}. No esperaba que tuvieras amigos.`;
     }
 
     if (this._matches(lower, ['cuántos jugadores', 'cuantos jugadores', 'número de jugadores'])) {
       const count = context.players?.length || 0;
-      return `Hay ${count} jugador(es) conectado(s).`;
+      return `Hay ${count} jugador(es). Contando a los que realmente importan, menos.`;
     }
 
     const whereMatch = message.match(/(?:dónde|donde)\s+(?:está|esta)\s+(\w+)/i);
@@ -105,32 +106,32 @@ export class ChatEngine {
       const targetPlayer = context.players?.find(
         (p) => p.name.toLowerCase() === target.toLowerCase()
       );
-      if (!targetPlayer) return `No veo a ${target} conectado.`;
-      return `${targetPlayer.name} está en X ${Math.floor(targetPlayer.x)} Y ${Math.floor(targetPlayer.y)} Z ${Math.floor(targetPlayer.z)}.`;
+      if (!targetPlayer) return `${target} no está conectado. ¿Seguro que no te lo inventaste?`;
+      return `${targetPlayer.name} está en X ${Math.floor(targetPlayer.x)} Y ${Math.floor(targetPlayer.y)} Z ${Math.floor(targetPlayer.z)}. Ve a stalkearlo, no te juzgo.`;
     }
 
     if (this._matches(lower, ['hora', 'qué hora es', 'que hora es', 'tiempo', 'día', 'dia'])) {
-      return `Es ${context.server?.time || 'desconocido'}.`;
+      return `Son las ${context.server?.time || 'desconocidas'}. ¿Tienes prisa por perder?`;
     }
 
     if (this._matches(lower, ['clima', 'está lloviendo', 'esta lloviendo', 'weather'])) {
-      return `El clima es: ${context.server?.weather || 'desconocido'}.`;
+      return `El clima es: ${context.server?.weather || 'desconocido'}. Igual que tu suerte, probablemente.`;
     }
 
     if (this._matches(lower, ['dimensión', 'dimension', 'en qué dimensión', 'en que dimension'])) {
-      return `Estamos en: ${context.server?.dimension || 'desconocida'}.`;
+      return `Estamos en: ${context.server?.dimension || 'una dimensión desconocida'}. Espero que no sea la de tu capacidad de jugar.`;
     }
 
     if (this._matches(lower, ['bioma', 'en qué bioma', 'en que bioma'])) {
-      return `El bioma es: ${context.server?.biome || 'desconocido'}.`;
+      return `El bioma es: ${context.server?.biome || 'desconocido'}. Tan interesante como tus construcciones.`;
     }
 
     if (this._matches(lower, ['vida', 'salud', 'health'])) {
-      return `Tengo ${context.bot?.health ?? '?'} puntos de vida.`;
+      return `Tengo ${context.bot?.health ?? '?'} de vida. Más de lo que tú vas a tener si sigues así.`;
     }
 
     if (this._matches(lower, ['hambre', 'comida', 'food'])) {
-      return `Tengo ${context.bot?.food ?? '?'} puntos de hambre.`;
+      return `Tengo ${context.bot?.food ?? '?'} de hambre. A diferencia tuya, la mía es controlable.`;
     }
 
     return null;
