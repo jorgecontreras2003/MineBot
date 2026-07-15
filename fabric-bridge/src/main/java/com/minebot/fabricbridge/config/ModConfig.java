@@ -8,7 +8,7 @@ public class ModConfig {
 
     private static final String DEFAULT_TRIGGER = "@bot";
     private static final String DEFAULT_AI_URL = "http://localhost:3000/chat";
-    private static final String DEFAULT_TIMEOUT = "5000";
+    private static final String DEFAULT_TIMEOUT = "90000";
 
     public String getTrigger() {
         return getEnv("BOT_TRIGGER", DEFAULT_TRIGGER);
