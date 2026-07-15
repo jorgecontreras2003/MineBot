@@ -26,6 +26,10 @@ public class ModConfig {
         return getEnv("BOT_NAME", "SteveAI");
     }
 
+    public String getApiKey() {
+        return getEnv("API_KEY", "");
+    }
+
     private String getEnv(String key, String defaultValue) {
         String value = System.getenv(key);
         return value != null && !value.isEmpty() ? value : defaultValue;

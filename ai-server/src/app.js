@@ -13,8 +13,27 @@ export function createApp() {
 
   app.use(express.json({ limit: '1mb' }));
 
+  // Health check público para Railway.
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', bot: config.bot.name });
+  });
+
+  // Middleware de autenticación para el endpoint /chat.
+  app.use('/chat', (req, res, next) => {
+    if (!config.apiKey) {
+      return next();
+    }
+
+    const providedKey = req.headers['x-api-key'];
+    if (providedKey !== config.apiKey) {
+      logger.warn('Intento de acceso no autorizado', {
+        ip: req.ip,
+        key: providedKey ? 'provided' : 'missing',
+      });
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    next();
   });
 
   app.post('/chat', async (req, res) => {

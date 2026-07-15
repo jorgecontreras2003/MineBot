@@ -49,6 +49,8 @@ export const config = {
     port: parseNumber('HTTP_PORT', 3000),
   },
 
+  apiKey: process.env.API_KEY || undefined,
+
   memory: {
     size: parseNumber('MEMORY_SIZE', 10),
   },

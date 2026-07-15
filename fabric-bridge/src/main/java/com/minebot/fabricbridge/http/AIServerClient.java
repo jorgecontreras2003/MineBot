@@ -57,12 +57,17 @@ public class AIServerClient {
 
             FabricBridgeMod.LOGGER.debug("[MineBot] Enviando a AI Server: {}", body);
 
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(config.getAiServerUrl()))
                     .header("Content-Type", "application/json")
                     .timeout(Duration.ofMillis(config.getTimeoutMs()))
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
+                    .POST(HttpRequest.BodyPublishers.ofString(body));
+
+            if (!config.getApiKey().isEmpty()) {
+                requestBuilder.header("X-API-Key", config.getApiKey());
+            }
+
+            HttpRequest request = requestBuilder.build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
