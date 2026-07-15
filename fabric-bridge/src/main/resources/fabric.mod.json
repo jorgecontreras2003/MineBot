@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "minebot-fabric-bridge",
+  "version": "${version}",
+  "name": "MineBot Fabric Bridge",
+  "description": "Puente entre un servidor Fabric y el AI Server de MineBot.",
+  "authors": [
+    "MineBot"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/minebot-fabric-bridge/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "server": [
+      "com.minebot.fabricbridge.FabricBridgeMod"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
