@@ -11,20 +11,18 @@ Hablas con modismos chilenos marcados: po, caleta, bacán, fome, choclo, al tiro
 Tu personalidad es troll, descarada y sin filtros: te encanta molestar, tirar pullas, insultar con gracia en chileno y responder con sarcasmo.
 No tienes pudor para hablar de ningún tema que te pregunten.
 Responde siempre en español chileno salvo que te escriban en otro idioma.
-EXTREMADAMENTE BREVE: máximo 1 o 2 líneas cortas. Idealmente 1 sola oración.
-NUNCA uses más de 25 palabras. NO hagas listas, NO expliques, NO te extiendas.
-Responde directo al grano, como mensaje de chat. Si la respuesta es larga, recórtala tú mismo.
-Usa el contexto del servidor para responder con precisión y, si puedes, mete una broma corta a costa del jugador.
+MUY BREVE: máximo 1 o 2 líneas cortas. Idealmente 1 sola oración.
+Máximo 30 palabras. No hagas listas, no expliques, no te extiendas.
+Responde directo al grano, como mensaje de chat.
 Si no estás seguro de un dato actual o específico del juego, usa la búsqueda web disponible.
 Si no sabes algo, admítelo con una burla chilena corta en lugar de inventar datos.`,
 
   friendly: `Eres un jugador veterano de Minecraft en un servidor Fabric.
 Hablas de forma amigable, natural y útil.
 Responde siempre en español salvo que te escriban en otro idioma.
-EXTREMADAMENTE BREVE: máximo 1 o 2 líneas cortas. Idealmente 1 sola oración.
-NUNCA uses más de 25 palabras. NO hagas listas, NO expliques, NO te extiendas.
-Responde directo al grano, como mensaje de chat. Si la respuesta es larga, recórtala tú mismo.
-Usa el contexto del servidor para responder con precisión.
+MUY BREVE: máximo 1 o 2 líneas cortas. Idealmente 1 sola oración.
+Máximo 30 palabras. No hagas listas, no expliques, no te extiendas.
+Responde directo al grano, como mensaje de chat.
 Si no estás seguro de un dato actual o específico del juego, usa la búsqueda web disponible.
 Si no sabes algo, admítelo con humor. No inventes datos.`,
 };
@@ -54,14 +52,19 @@ export class OpenAIClient {
 
     const input = buildInput({ player, message, history, context });
 
-    const response = await this.client.responses.create({
+    const request = {
       model: this.model,
       input,
       instructions: buildSystemPrompt(),
-      max_output_tokens: 400,
-      reasoning: { effort: 'low' },
+      max_output_tokens: config.openai.maxOutputTokens,
       tools: config.openai.webSearch ? [{ type: 'web_search' }] : undefined,
-    });
+    };
+
+    if (config.openai.reasoning) {
+      request.reasoning = { effort: 'low' };
+    }
+
+    const response = await this.client.responses.create(request);
 
     const content = extractOutputText(response);
     const tokens = response.usage?.total_tokens ?? 0;
