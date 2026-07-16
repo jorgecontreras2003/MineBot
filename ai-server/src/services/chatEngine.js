@@ -64,7 +64,7 @@ export class ChatEngine {
   }
 
   /**
-   * Trunca la respuesta a 1 o 2 líneas cortas para el chat.
+   * Trunca la respuesta a un máximo de 3 líneas/oraciones cortas para el chat.
    * @param {string} text
    * @returns {string}
    */
@@ -73,11 +73,12 @@ export class ChatEngine {
       .replace(/\n+/g, ' ')
       .split(/(?<=[.!?])\s+/)
       .filter((s) => s.trim().length > 0)
-      .slice(0, 2)
+      .slice(0, 3)
       .map((s) => s.trim());
 
     const reply = sentences.join(' ');
-    return reply.length > 140 ? `${reply.slice(0, 137).trim()}...` : reply;
+    // Solo cortamos con "..." si es excesivamente largo para el chat de Minecraft.
+    return reply.length > 280 ? `${reply.slice(0, 277).trim()}...` : reply;
   }
 
   /**

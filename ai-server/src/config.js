@@ -39,8 +39,8 @@ export const config = {
     apiKey: requireEnv('OPENAI_API_KEY'),
     model: process.env.OPENAI_MODEL || 'gpt-5-mini',
     webSearch: process.env.OPENAI_WEB_SEARCH === 'true',
-    reasoning: process.env.OPENAI_REASONING === 'true',
-    maxOutputTokens: parseNumber('OPENAI_MAX_OUTPUT_TOKENS', 400),
+    reasoning: process.env.OPENAI_REASONING !== 'false',
+    maxOutputTokens: parseNumber('OPENAI_MAX_OUTPUT_TOKENS', 500),
   },
 
   bot: {
