@@ -3,6 +3,7 @@ package com.minebot.fabricbridge;
 import com.minebot.fabricbridge.chat.ChatListener;
 import com.minebot.fabricbridge.config.ModConfig;
 import com.minebot.fabricbridge.http.AIServerClient;
+import com.minebot.fabricbridge.tick.ServerTickTracker;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
@@ -26,6 +27,8 @@ public class FabricBridgeMod implements DedicatedServerModInitializer {
     public void onInitializeServer() {
         LOGGER.info("[MineBot] Fabric Bridge iniciado. Prefijo: {}", config.getTrigger());
         LOGGER.info("[MineBot] AI Server URL: {}", config.getAiServerUrl());
+
+        ServerTickTracker.register();
 
         ServerLifecycleEvents.SERVER_STARTED.register(this::onServerStarted);
         ServerLifecycleEvents.SERVER_STOPPING.register(this::onServerStopping);
