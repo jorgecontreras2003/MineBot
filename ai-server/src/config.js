@@ -56,6 +56,13 @@ export const config = {
 
   apiKey: process.env.API_KEY || undefined,
 
+  rcon: {
+    host: process.env.RCON_HOST || 'localhost',
+    port: parseNumber('RCON_PORT', 25575),
+    password: process.env.RCON_PASSWORD || '',
+    enabled: process.env.RCON_ENABLED === 'true',
+  },
+
   memory: {
     size: parseNumber('MEMORY_SIZE', 10),
   },

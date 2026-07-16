@@ -33,7 +33,9 @@ public class ServerContext {
         root.addProperty("player", playerName);
         root.addProperty("message", message);
 
-        root.add("server", buildServerInfo());
+        ServerPlayerEntity askingPlayer = server.getPlayerManager().getPlayer(playerName);
+
+        root.add("server", buildServerInfo(askingPlayer));
         root.add("bot", buildBotInfo());
         root.add("players", buildPlayersList());
         root.add("mods", buildModsList());
@@ -41,18 +43,20 @@ public class ServerContext {
         return root;
     }
 
-    private JsonObject buildServerInfo() {
+    private JsonObject buildServerInfo(ServerPlayerEntity askingPlayer) {
         JsonObject serverInfo = new JsonObject();
 
-        World world = server.getOverworld();
+        World world = askingPlayer != null ? askingPlayer.getWorld() : server.getOverworld();
         long time = world.getTimeOfDay();
         boolean raining = world.isRaining();
         boolean thundering = world.isThundering();
 
         serverInfo.addProperty("time", isDay(time) ? "day" : "night");
         serverInfo.addProperty("weather", thundering ? "thunder" : (raining ? "rain" : "clear"));
-        serverInfo.addProperty("dimension", "overworld");
-        serverInfo.addProperty("biome", getBiomeName(world, playerPosition()));
+        serverInfo.addProperty("dimension", getDimensionName(world));
+        serverInfo.addProperty("biome", getBiomeName(world, askingPlayer != null ? askingPlayer.getBlockPos() : worldSpawn()));
+        serverInfo.addProperty("online_count", server.getPlayerManager().getPlayerList().size());
+        serverInfo.addProperty("max_players", server.getMaxPlayerCount());
 
         return serverInfo;
     }
@@ -100,6 +104,13 @@ public class ServerContext {
         return world.getBiome(pos).getKey()
                 .map(key -> key.getValue().toString())
                 .orElse("unknown");
+    }
+
+    private String getDimensionName(World world) {
+        if (world == null) {
+            return "unknown";
+        }
+        return world.getRegistryKey().getValue().toString();
     }
 
     private BlockPos playerPosition() {
