@@ -38,14 +38,14 @@ export function createApp() {
 
   app.post('/chat', async (req, res) => {
     const startTime = Date.now();
-    const { player, message, server, bot, players, mods } = req.body;
+    const { player, message, server, bot, players, mods, bridgeResult } = req.body;
 
     if (!player || !message) {
       logger.warn('Solicitud inválida', { body: req.body });
       return res.status(400).json({ error: 'Faltan player o message' });
     }
 
-    logger.info('Consulta recibida', { player, message });
+    logger.info('Consulta recibida', { player, message, hasBridgeResult: !!bridgeResult });
 
     try {
       const result = await engine.process({
@@ -55,6 +55,7 @@ export function createApp() {
         bot: bot || {},
         players: players || [],
         mods: mods || [],
+        bridgeResult,
       });
 
       const durationMs = Date.now() - startTime;
@@ -63,7 +64,12 @@ export function createApp() {
         source: result.source,
         durationMs,
         tokens: result.tokens,
+        bridge: !!result.bridge,
       });
+
+      if (result.bridge) {
+        return res.json({ bridge: result.bridge });
+      }
 
       return res.json({ reply: result.reply });
     } catch (error) {

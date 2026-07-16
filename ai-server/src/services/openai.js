@@ -16,7 +16,9 @@ Máximo 50 palabras. No hagas listas, no expliques, no te extiendas.
 Responde directo al grano, como mensaje de chat.
 Si no estás seguro de un dato actual o específico del juego, usa la búsqueda web disponible.
 NO cites fuentes, NO añadas referencias como [^1^] ni digas "según X". Responde directo sin mencionar de dónde sacaste la info.
-Si no sabes algo, admítelo con una burla chilena corta en lugar de inventar datos.`,
+Si no sabes algo, admítelo con una burla chilena corta en lugar de inventar datos.
+
+Tienes acceso a herramientas del servidor de Minecraft. Cuando una pregunta requiera datos en tiempo real del mundo (jugadores, clima, hora, biomas, estructuras, ubicaciones, etc.), usa la herramienta correspondiente en lugar de inventar la respuesta.`,
 
   friendly: `Eres un jugador veterano de Minecraft en un servidor Fabric.
 Hablas de forma amigable, natural y útil.
@@ -26,7 +28,9 @@ Máximo 50 palabras. No hagas listas, no expliques, no te extiendas.
 Responde directo al grano, como mensaje de chat.
 Si no estás seguro de un dato actual o específico del juego, usa la búsqueda web disponible.
 NO cites fuentes, NO añadas referencias como [^1^] ni digas "según X". Responde directo sin mencionar de dónde sacaste la info.
-Si no sabes algo, admítelo con humor. No inventes datos.`,
+Si no sabes algo, admítelo con humor. No inventes datos.
+
+Tienes acceso a herramientas del servidor de Minecraft. Cuando una pregunta requiera datos en tiempo real del mundo (jugadores, clima, hora, biomas, estructuras, ubicaciones, etc.), usa la herramienta correspondiente en lugar de inventar la respuesta.`,
 };
 
 /**
@@ -47,9 +51,10 @@ export class OpenAIClient {
    * @param {string} params.message
    * @param {Array<{role: 'user'|'assistant', content: string}>} params.history
    * @param {object} params.context
-   * @returns {Promise<{content: string, tokens: number, durationMs: number}>}
+   * @param {Array<object>} [params.tools]
+   * @returns {Promise<{content?: string, toolCalls?: Array<object>, response: object, tokens: number, durationMs: number}>}
    */
-  async generateResponse({ player, message, history, context }) {
+  async generateResponse({ player, message, history, context, tools }) {
     const startTime = Date.now();
 
     const input = buildInput({ player, message, history, context });
@@ -59,7 +64,7 @@ export class OpenAIClient {
       input,
       instructions: buildSystemPrompt(),
       max_output_tokens: config.openai.maxOutputTokens,
-      tools: config.openai.webSearch ? [{ type: 'web_search' }] : undefined,
+      tools: buildTools(tools),
     };
 
     if (config.openai.reasoning) {
@@ -68,11 +73,58 @@ export class OpenAIClient {
 
     const response = await this.client.responses.create(request);
 
+    const toolCalls = extractToolCalls(response);
+    const tokens = response.usage?.total_tokens ?? 0;
+    const durationMs = Date.now() - startTime;
+
+    logger.info('Respuesta generada por OpenAI', {
+      player,
+      tokens,
+      durationMs,
+      toolCalls: toolCalls.length,
+      contentLength: extractOutputText(response).length,
+    });
+
+    if (toolCalls.length > 0) {
+      return { toolCalls, response, tokens, durationMs };
+    }
+
+    return { content: extractOutputText(response), response, tokens, durationMs };
+  }
+
+  /**
+   * Continúa una conversación previa inyectando los resultados de herramientas.
+   *
+   * @param {object} params
+   * @param {object} params.previousResponse respuesta previa de OpenAI
+   * @param {Array<{callId: string, result: object}>} params.toolResults
+   * @returns {Promise<{content: string, tokens: number, durationMs: number}>}
+   */
+  async generateFollowUp({ previousResponse, toolResults }) {
+    const startTime = Date.now();
+
+    const input = toolResults.map((tr) => ({
+      type: 'function_call_output',
+      call_id: tr.callId,
+      output: JSON.stringify(tr.result),
+    }));
+
+    const response = await this.client.responses.create({
+      model: this.model,
+      previous_response_id: previousResponse.id,
+      input,
+      max_output_tokens: config.openai.maxOutputTokens,
+    });
+
     const content = extractOutputText(response);
     const tokens = response.usage?.total_tokens ?? 0;
     const durationMs = Date.now() - startTime;
 
-    logger.info('Respuesta generada por OpenAI', { player, tokens, durationMs, contentLength: content.length });
+    logger.info('Respuesta final generada por OpenAI tras herramientas', {
+      tokens,
+      durationMs,
+      contentLength: content.length,
+    });
 
     return { content, tokens, durationMs };
   }
@@ -101,6 +153,46 @@ function extractOutputText(response) {
   return config.bot.personality === 'troll'
     ? 'Me quedé en blanco, weón. Repite la wea.'
     : 'Me quedé en blanco. ¿Puedes repetir? :c';
+}
+
+/**
+ * Extrae las llamadas a funciones de la respuesta de OpenAI.
+ * @param {object} response
+ * @returns {Array<{callId: string, name: string, arguments: object}>}
+ */
+function extractToolCalls(response) {
+  const items = response.output || [];
+  return items
+    .filter((item) => item.type === 'function_call')
+    .map((item) => {
+      let args = {};
+      try {
+        args = item.arguments ? JSON.parse(item.arguments) : {};
+      } catch {
+        logger.warn('No se pudieron parsear los argumentos del function_call', { item });
+      }
+      return {
+        callId: item.call_id,
+        name: item.name,
+        arguments: args,
+      };
+    });
+}
+
+/**
+ * Combina herramientas propias con la búsqueda web si está activada.
+ * @param {Array<object>} tools
+ * @returns {Array<object>}
+ */
+function buildTools(tools) {
+  const result = [];
+  if (config.openai.webSearch) {
+    result.push({ type: 'web_search' });
+  }
+  if (tools?.length) {
+    result.push(...tools);
+  }
+  return result.length > 0 ? result : undefined;
 }
 
 /**

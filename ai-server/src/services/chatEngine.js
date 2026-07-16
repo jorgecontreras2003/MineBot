@@ -1,10 +1,16 @@
 import { logger } from '../utils/logger.js';
+import { config } from '../config.js';
 import { MemoryManager } from '../utils/memory.js';
 import { CooldownManager } from '../utils/cooldown.js';
 import { OpenAIClient } from './openai.js';
+import { getOpenAITools } from './toolRegistry.js';
 
 /**
- * Motor híbrido que decide si responde localmente o llama a OpenAI.
+ * Motor híbrido que decide si responde localmente, llama a OpenAI o
+ * utiliza el Bridge de Minecraft para obtener datos en tiempo real.
+ *
+ * El Bridge funciona en round-trip: el AI Server le pide al mod que ejecute una
+ * herramienta, el mod ejecuta la acción y vuelve a llamar a /chat con el resultado.
  */
 export class ChatEngine {
   constructor() {
@@ -23,9 +29,13 @@ export class ChatEngine {
    * @param {object} request.bot
    * @param {Array<object>} request.players
    * @param {Array<string>} [request.mods]
-   * @returns {Promise<{reply: string, source: 'local'|'openai', tokens?: number, durationMs?: number}>}
+   * @param {object} [request.bridgeResult]
+   * @param {string} request.bridgeResult.callId
+   * @param {string} request.bridgeResult.previousResponseId
+   * @param {object} request.bridgeResult.result
+   * @returns {Promise<{reply?: string, bridge?: object, source: 'local'|'openai'|'bridge', tokens?: number, durationMs?: number}>}
    */
-  async process({ player, message, server, bot, players, mods }) {
+  async process({ player, message, server, bot, players, mods, bridgeResult }) {
     const cooldown = this.cooldown.check(player);
     if (!cooldown.allowed) {
       return {
@@ -39,6 +49,12 @@ export class ChatEngine {
     const normalizedMessage = message.trim();
     const context = { player, server, bot, players, mods };
 
+    // Si estamos en la segunda vuelta del Bridge, el LLM ya recibió el resultado
+    // de la herramienta y debe generar la respuesta final.
+    if (bridgeResult) {
+      return this._handleBridgeResult({ player, context, bridgeResult });
+    }
+
     const localReply = this._tryLocalResponse(normalizedMessage, context);
     if (localReply) {
       this.memory.add(player, 'assistant', localReply);
@@ -49,18 +65,99 @@ export class ChatEngine {
     const history = this.memory.get(player);
     this.memory.add(player, 'user', normalizedMessage);
 
-    const { content, tokens, durationMs } = await this.openai.generateResponse({
+    const tools = config.bridge.enabled ? getOpenAITools() : undefined;
+
+    const firstResponse = await this.openai.generateResponse({
       player,
       message: normalizedMessage,
       history,
       context,
+      tools,
     });
 
-    const formattedReply = this._formatReply(content);
-    this.memory.add(player, 'assistant', formattedReply);
-    logger.info('Respuesta IA', { player, message, tokens, durationMs });
+    if (firstResponse.toolCalls && firstResponse.toolCalls.length > 0) {
+      const toolCall = firstResponse.toolCalls[0];
+      logger.info('LLM solicitó herramienta', {
+        player,
+        tool: toolCall.name,
+        arguments: toolCall.arguments,
+      });
+      return {
+        bridge: {
+          callId: toolCall.callId,
+          tool: toolCall.name,
+          arguments: toolCall.arguments,
+          previousResponseId: firstResponse.response.id,
+        },
+        source: 'bridge',
+      };
+    }
 
-    return { reply: formattedReply, source: 'openai', tokens, durationMs };
+    const reply = this._formatReply(firstResponse.content);
+    this.memory.add(player, 'assistant', reply);
+    logger.info('Respuesta IA', {
+      player,
+      message,
+      tokens: firstResponse.tokens,
+      durationMs: firstResponse.durationMs,
+      source: 'openai',
+    });
+
+    return {
+      reply,
+      source: 'openai',
+      tokens: firstResponse.tokens,
+      durationMs: firstResponse.durationMs,
+    };
+  }
+
+  /**
+   * Genera la respuesta final tras recibir el resultado de una herramienta.
+   *
+   * @param {object} params
+   * @returns {Promise<{reply: string, source: 'bridge', tokens: number, durationMs: number}>}
+   */
+  async _handleBridgeResult({ player, bridgeResult }) {
+    const { callId, previousResponseId, result } = bridgeResult;
+
+    logger.info('Procesando resultado de herramienta', {
+      player,
+      callId,
+      tool: result,
+    });
+
+    try {
+      const followUp = await this.openai.generateFollowUp({
+        previousResponse: { id: previousResponseId },
+        toolResults: [{ callId, result }],
+      });
+
+      const reply = this._formatReply(followUp.content);
+      this.memory.add(player, 'assistant', reply);
+
+      logger.info('Respuesta final tras Bridge', {
+        player,
+        tokens: followUp.tokens,
+        durationMs: followUp.durationMs,
+      });
+
+      return {
+        reply,
+        source: 'bridge',
+        tokens: followUp.tokens,
+        durationMs: followUp.durationMs,
+      };
+    } catch (error) {
+      logger.error('Error generando respuesta final tras Bridge', {
+        player,
+        error: error.message,
+      });
+      const fallback = config.bot.personality === 'troll'
+        ? 'Me perdí con la wea del Bridge, weón. Intenta de nuevo.'
+        : 'No pude procesar el resultado de la herramienta. ¿Intentas de nuevo?';
+      this.memory.add(player, 'assistant', fallback);
+      return { reply: fallback, source: 'bridge' };
+    }
   }
 
   /**

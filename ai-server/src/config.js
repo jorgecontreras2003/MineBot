@@ -56,6 +56,10 @@ export const config = {
 
   apiKey: process.env.API_KEY || undefined,
 
+  bridge: {
+    enabled: process.env.BRIDGE_ENABLED === 'true',
+  },
+
   memory: {
     size: parseNumber('MEMORY_SIZE', 10),
   },
