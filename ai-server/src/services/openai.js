@@ -58,7 +58,7 @@ export class OpenAIClient {
       model: this.model,
       input,
       instructions: buildSystemPrompt(),
-      max_output_tokens: 80,
+      max_output_tokens: 260,
       reasoning: { effort: 'low' },
       tools: config.openai.webSearch ? [{ type: 'web_search' }] : undefined,
     });
