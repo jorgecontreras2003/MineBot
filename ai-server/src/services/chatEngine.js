@@ -64,7 +64,7 @@ export class ChatEngine {
   }
 
   /**
-   * Trunca la respuesta a 2 o 3 líneas cortas para el chat.
+   * Trunca la respuesta a 1 o 2 líneas cortas para el chat.
    * @param {string} text
    * @returns {string}
    */
@@ -73,10 +73,11 @@ export class ChatEngine {
       .replace(/\n+/g, ' ')
       .split(/(?<=[.!?])\s+/)
       .filter((s) => s.trim().length > 0)
-      .slice(0, 3)
+      .slice(0, 2)
       .map((s) => s.trim());
 
-    return sentences.join(' ');
+    const reply = sentences.join(' ');
+    return reply.length > 140 ? `${reply.slice(0, 137).trim()}...` : reply;
   }
 
   /**
