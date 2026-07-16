@@ -69,8 +69,13 @@ export class ChatEngine {
    * @returns {string}
    */
   _formatReply(text) {
-    const sentences = text
+    const clean = text
+      .replace(/\[\^?\d+\^?\]/g, '')
+      .replace(/\s*\(\d+\)\s*/g, ' ')
       .replace(/\n+/g, ' ')
+      .trim();
+
+    const sentences = clean
       .split(/(?<=[.!?])\s+/)
       .filter((s) => s.trim().length > 0)
       .slice(0, 3)
