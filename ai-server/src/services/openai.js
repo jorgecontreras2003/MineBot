@@ -58,19 +58,44 @@ export class OpenAIClient {
       model: this.model,
       input,
       instructions: buildSystemPrompt(),
-      max_output_tokens: 260,
+      max_output_tokens: 400,
       reasoning: { effort: 'low' },
       tools: config.openai.webSearch ? [{ type: 'web_search' }] : undefined,
     });
 
-    const content = response.output_text?.trim() || 'No sé qué decir...';
+    const content = extractOutputText(response);
     const tokens = response.usage?.total_tokens ?? 0;
     const durationMs = Date.now() - startTime;
 
-    logger.info('Respuesta generada por OpenAI', { player, tokens, durationMs });
+    logger.info('Respuesta generada por OpenAI', { player, tokens, durationMs, contentLength: content.length });
 
     return { content, tokens, durationMs };
   }
+}
+
+/**
+ * Extrae el texto de salida de la Responses API, con fallback robusto.
+ * @param {object} response
+ * @returns {string}
+ */
+function extractOutputText(response) {
+  const text = response.output_text?.trim();
+  if (text) return text;
+
+  // Si la API no devolvió output_text, intentamos extraer de los mensajes.
+  const items = response.output || [];
+  const messageText = items
+    .filter((item) => item.type === 'message' && item.role === 'assistant')
+    .map((item) => item.content?.map((c) => c.text || c.output_text || '').join(' '))
+    .join(' ')
+    .trim();
+
+  if (messageText) return messageText;
+
+  logger.warn('OpenAI devolvió respuesta vacía, usando fallback', { response });
+  return config.bot.personality === 'troll'
+    ? 'Me quedé en blanco, weón. Repite la wea.'
+    : 'Me quedé en blanco. ¿Puedes repetir? :c';
 }
 
 /**
