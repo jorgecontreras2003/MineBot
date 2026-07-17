@@ -214,30 +214,6 @@ export class ChatEngine {
       return `${targetPlayer.name} está en X ${Math.floor(targetPlayer.x)} Y ${Math.floor(targetPlayer.y)} Z ${Math.floor(targetPlayer.z)}. Ve a stalkearlo, mula.`;
     }
 
-    if (this._matches(lower, ['hora', 'qué hora es', 'que hora es', 'tiempo', 'día', 'dia'])) {
-      return `Son las ${context.server?.time || 'desconocidas'}, po. ¿Tienes prisa por perder?`;
-    }
-
-    if (this._matches(lower, ['clima', 'está lloviendo', 'esta lloviendo', 'weather'])) {
-      return `El clima es: ${context.server?.weather || 'desconocido'}. Igual que tu suerte, cumpa.`;
-    }
-
-    if (this._matches(lower, ['dimensión', 'dimension', 'en qué dimensión', 'en que dimension'])) {
-      return `Estamos en: ${context.server?.dimension || 'una dimensión desconocida'}. Espero que no sea la de tu capacidad de jugar, weón.`;
-    }
-
-    if (this._matches(lower, ['bioma', 'en qué bioma', 'en que bioma'])) {
-      return `El bioma es: ${context.server?.biome || 'desconocido'}. Tan fome como tus construcciones.`;
-    }
-
-    if (this._matches(lower, ['vida', 'salud', 'health'])) {
-      return `Tengo ${context.bot?.health ?? '?'} de vida, hermanito. Más de lo que tú vas a tener si sigues así.`;
-    }
-
-    if (this._matches(lower, ['hambre', 'comida', 'food'])) {
-      return `Tengo ${context.bot?.food ?? '?'} de hambre. A diferencia tuya, la mía es controlable, aweonao.`;
-    }
-
     return null;
   }
 
